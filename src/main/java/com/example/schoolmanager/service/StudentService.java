@@ -1,8 +1,11 @@
 package com.example.schoolmanager.service;
 
 import java.util.List;
+import java.util.UUID;
 
-import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import com.example.schoolmanager.model.Student;
@@ -11,26 +14,45 @@ import com.example.schoolmanager.respository.StudentRepository;
 @Service
 public class StudentService {
 
-    @Autowired
-    private StudentRepository repository;
+    private final StudentRepository repo;
 
-    public Student addStudent(Student student) {
-        return repository.save(student);
+    public StudentService(StudentRepository repo) {
+        this.repo = repo;
     }
 
-    public void deleteStudent(int id) {
-        repository.deleteById(id);
+    public List<Student> getAll() {
+        return repo.findAll();
     }
 
-    public List<Student> findByName(String name){
-        return repository.findByNameContainingIgnoreCase(name);
+    public Student getById(UUID id) {
+        return repo.findById(id).orElse(null);
     }
 
-    public List<Student> getAll(){
-        return repository.findAll();
+    public Student create(Student student) {
+        return repo.save(student); // UUID tự sinh ở đây
     }
 
-    public Student getStudentById(int id){
-        return repository.findById(id).orElse(null);
+    public Student update(UUID id, Student student) {
+        Student old = getById(id);
+        if (old == null)
+            return null;
+
+        old.setName(student.getName());
+        old.setEmail(student.getEmail());
+
+        return repo.save(old);
+    }
+
+    public void delete(UUID id) {
+        repo.deleteById(id);
+    }
+
+    public Page<Student> search(String keyword, int page, int size) {
+        String k = (keyword == null) ? "" : keyword.trim();
+        Pageable pageable = PageRequest.of(page, size);
+        if (k.isEmpty()) {
+            return repo.findAll(pageable);
+        }
+        return repo.findByNameContainingIgnoreCaseOrEmailContainingIgnoreCase(k, k, pageable);
     }
 }
